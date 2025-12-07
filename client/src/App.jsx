@@ -8,8 +8,9 @@ import { useContext } from 'react'
 import { AuthContext } from '../context/AuthContext.jsx'
 
 function App () {
-  const { authUser } = useContext(AuthContext)
+  const { authUser, loading } = useContext(AuthContext)
 
+  if (loading) return <div>Loading...</div>;
   return (
     <div className='bg-[url("/bgImage.svg")] bg-contain'>
       <Toaster />

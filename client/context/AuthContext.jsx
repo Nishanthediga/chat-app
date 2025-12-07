@@ -2,6 +2,8 @@ import { createContext ,useEffect,useState} from "react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { io } from "socket.io-client";
+import { useNavigate } from "react-router-dom";
+
 
 const backendURL=import.meta.env.VITE_BACKEND_URL
 axios.defaults.baseURL=backendURL
@@ -12,6 +14,8 @@ const [token,setToken]=useState(localStorage.getItem('token'))
 const [authUser,setAuthUser]=useState(null);
 const [onlineUsers,setOnlineUsers]=useState([]);
 const [socket,setSocket]=useState(null);
+const [loading, setLoading] = useState(true);
+const navigate = useNavigate();
 
 
 //check if user is authenticated and if so, set the user data and connect the socket
@@ -21,8 +25,10 @@ const checkAuth=async()=>{
     if(data.success){
       setAuthUser(data.user)
       connectSocket(data.user)
+      setLoading(false); 
     }
   } catch (error) {
+    setLoading(false);
     toast.error(error.message);
     
   }
@@ -58,6 +64,7 @@ const logout=async()=>{
   axios.defaults.headers.common['token']=null;
   toast.success("Logged out successfully");
   socket.disconnect();
+  navigate('/login');
 
 
 
@@ -98,9 +105,12 @@ newSocket.on('getOnlineUsers',(userIds=>{
 useEffect(()=>{
   if(token){
     axios.defaults.headers.common['token']=token;//it add the token for all the api requests
+     checkAuth(); 
+  }else{
+    setLoading(false);
   }
-  checkAuth();
-})
+ 
+},[token])
 
 
 const value={
@@ -110,7 +120,8 @@ const value={
   socket,
   login,
   logout,
-  updateProfile
+  updateProfile,
+  loading
 }
 return (
   <AuthContext.Provider value={value}>
