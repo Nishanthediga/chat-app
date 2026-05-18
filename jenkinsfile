@@ -1,0 +1,68 @@
+pipeline {
+  agent any
+
+  tools {
+    nodejs 'nish_node'
+  }
+
+  environment {
+    CI = 'true'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Verify Node') {
+      steps {
+        bat 'node -v'
+        bat 'npm -v'
+      }
+    }
+
+    stage('Install Server Dependencies') {
+      steps {
+        dir('server') {
+          bat 'npm ci'
+        }
+      }
+    }
+
+    stage('Install Client Dependencies') {
+      steps {
+        dir('client') {
+          bat 'npm ci'
+        }
+      }
+    }
+
+    stage('Build Client') {
+      steps {
+        dir('client') {
+          bat 'npm run build'
+        }
+      }
+    }
+
+    stage('Archive Build Output') {
+      steps {
+        archiveArtifacts artifacts: 'client/dist/**', fingerprint: true
+      }
+    }
+  }
+
+  post {
+    success {
+      echo 'Build completed successfully.'
+    }
+    failure {
+      echo 'Build failed.'
+    }
+    always {
+      cleanWs()
+    }
+  }
+}
