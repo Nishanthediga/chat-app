@@ -1,0 +1,71 @@
+trigger:
+  branches:
+    include:
+      - main
+      - master
+
+pr:
+  branches:
+    include:
+      - main
+      - master
+
+pool:
+  name: 'nishanth'
+  demands:
+    - agent.name -equals nishanthho
+
+variables:
+  NODE_VERSION: '18.x'
+  CLIENT_DIR: 'client'
+  SERVER_DIR: 'server'
+  ARTIFACT_NAME: 'chat-app-artifact'
+
+stages:
+- stage: Build
+  displayName: Build client and server
+  jobs:
+  - job: InstallAndBuild
+    displayName: Install and build
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '$(NODE_VERSION)'
+      displayName: Use Node.js $(NODE_VERSION)
+
+    - powershell: |
+        Write-Host "Installing and building client..."
+        Set-Location $(CLIENT_DIR)
+        if (Test-Path package-lock.json) { npm ci } else { npm install }
+        npm run build
+      displayName: Install & build client
+
+    - powershell: |
+        Write-Host "Installing server dependencies..."
+        Set-Location $(SERVER_DIR)
+        if (Test-Path package-lock.json) { npm ci } else { npm install }
+      displayName: Install server dependencies
+
+    - powershell: |
+        Write-Host "Preparing artifact staging directory..."
+        $dest = Join-Path "$(Build.ArtifactStagingDirectory)" "$(ARTIFACT_NAME)"
+        New-Item -ItemType Directory -Force -Path $dest | Out-Null
+        Write-Host "Copying client build output (dist)..."
+        $clientDist = Join-Path "$(CLIENT_DIR)" 'dist'
+        if (Test-Path $clientDist) { Copy-Item -Path (Join-Path $clientDist '*') -Destination $dest -Recurse -Force }
+        Write-Host "Copying server app files..."
+        $serverDest = Join-Path $dest 'server'
+        New-Item -ItemType Directory -Force -Path $serverDest | Out-Null
+        Copy-Item -Path (Join-Path "$(SERVER_DIR)" '*') -Destination $serverDest -Recurse -Force -ErrorAction SilentlyContinue
+        $nodeModules = Join-Path $serverDest 'node_modules'
+        if (Test-Path $nodeModules) { Remove-Item -Recurse -Force $nodeModules -ErrorAction SilentlyContinue }
+      displayName: Prepare artifact
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)/$(ARTIFACT_NAME)'
+        ArtifactName: '$(ARTIFACT_NAME)'
+        publishLocation: 'Container'
+      displayName: Publish artifact
+
+# Docker stage removed per request
