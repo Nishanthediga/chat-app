@@ -16,7 +16,7 @@ pool:
     - agent.name -equals nishanthho
 
 variables:
-  NODE_VERSION: '18.x'
+  NODE_VERSION: '20.x'
   CLIENT_DIR: 'client'
   SERVER_DIR: 'server'
   ARTIFACT_NAME: 'chat-app-artifact'
